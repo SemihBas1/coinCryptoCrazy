@@ -5,10 +5,18 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.coincryptocrazy.databinding.FragmentListBinding
 import com.example.coincryptocrazy.model.CryptoModel
+import com.example.coincryptocrazy.service.CryptoAPI
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 
 class ListFragment : Fragment() {
@@ -40,11 +48,35 @@ class ListFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val layoutManager = LinearLayoutManager(requireContext())
+        binding?.recyclerView?.layoutManager=layoutManager
+        loadData()
+
+    }
+    private fun loadData(){
+        val retrofit = Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(CryptoAPI::class.java)
+
+        job= CoroutineScope(Dispatchers.IO+exceptionHandler).launch {
+           val response= retrofit.getData()
+            withContext(Dispatchers.Main){
+                if (response.isSuccessful){
+                    response.body()?.let {
+                        println(it)
+                    }
+                }
+            }
+        }
+
 
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        job?.cancel()
     }
 
 }

@@ -6,6 +6,6 @@ import retrofit2.http.GET
 
 interface CryptoAPI {
     //atilsamancioglu/K21-JSONDataSet/master/crypto.json
-    @GET("https://raw.githubusercontent.com/")
+    @GET("atilsamancioglu/K21-JSONDataSet/master/crypto.json")
     suspend fun getData() : Response<List<CryptoModel>>
 }
