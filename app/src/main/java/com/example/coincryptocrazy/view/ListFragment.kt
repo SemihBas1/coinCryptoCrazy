@@ -5,6 +5,7 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.coincryptocrazy.databinding.FragmentListBinding
 import com.example.coincryptocrazy.model.CryptoModel
@@ -19,12 +20,13 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 
-class ListFragment : Fragment() {
+class ListFragment : Fragment(),RecyclerViewAdapter.Listener {
     private var _binding:FragmentListBinding?=null
     private val binding get()=_binding
     private val BASE_URL="https://raw.githubusercontent.com/"
     private var cryptoModels : ArrayList<CryptoModel>?=null
     private var job: Job?=null
+    private var recyclerViewAdapter:RecyclerViewAdapter?=null
 
     val exceptionHandler= CoroutineExceptionHandler { coroutineContext, throwable ->
         println("Error: ${throwable.localizedMessage}")
@@ -65,7 +67,14 @@ class ListFragment : Fragment() {
             withContext(Dispatchers.Main){
                 if (response.isSuccessful){
                     response.body()?.let {
-                        println(it)
+                        cryptoModels= ArrayList(it)
+                        cryptoModels?.let {
+                            recyclerViewAdapter= RecyclerViewAdapter(it,this@ListFragment)
+                            binding?.recyclerView?.adapter=recyclerViewAdapter
+
+                        }
+
+
                     }
                 }
             }
@@ -77,6 +86,10 @@ class ListFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         job?.cancel()
+    }
+
+    override fun onItemClick(cryptoModel: CryptoModel) {
+        Toast.makeText(requireContext(),"Clicked on :${cryptoModel.currency}",Toast.LENGTH_SHORT).show()
     }
 
 }
