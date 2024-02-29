@@ -6,10 +6,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.coincryptocrazy.databinding.FragmentListBinding
 import com.example.coincryptocrazy.model.CryptoModel
 import com.example.coincryptocrazy.service.CryptoAPI
+import com.example.coincryptocrazy.viewModel.CryptoViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,14 +26,9 @@ import retrofit2.converter.gson.GsonConverterFactory
 class ListFragment : Fragment(),RecyclerViewAdapter.Listener {
     private var _binding:FragmentListBinding?=null
     private val binding get()=_binding
-    private val BASE_URL="https://raw.githubusercontent.com/"
-    private var cryptoModels : ArrayList<CryptoModel>?=null
-    private var job: Job?=null
-    private var recyclerViewAdapter:RecyclerViewAdapter?=null
+    private var cryptoAdapter=RecyclerViewAdapter(arrayListOf(),this)
+    private lateinit var viewModel: CryptoViewModel
 
-    val exceptionHandler= CoroutineExceptionHandler { coroutineContext, throwable ->
-        println("Error: ${throwable.localizedMessage}")
-    }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,40 +50,52 @@ class ListFragment : Fragment(),RecyclerViewAdapter.Listener {
         super.onViewCreated(view, savedInstanceState)
         val layoutManager = LinearLayoutManager(requireContext())
         binding?.recyclerView?.layoutManager=layoutManager
-        loadData()
-
+        viewModel=ViewModelProvider(this).get(CryptoViewModel::class.java)
+        viewModel.getDataFromApi()
+        observeLiveData()
     }
-    private fun loadData(){
-        val retrofit = Retrofit.Builder()
-            .baseUrl(BASE_URL)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(CryptoAPI::class.java)
+  private fun observeLiveData(){
+      viewModel.cryptoList.observe(viewLifecycleOwner, Observer { cryptos->
+          cryptos?.let {
+              binding?.recyclerView?.visibility=View.VISIBLE
+              cryptoAdapter= RecyclerViewAdapter(ArrayList(cryptos),this@ListFragment)
+              binding?.recyclerView?.adapter=cryptoAdapter
 
-        job= CoroutineScope(Dispatchers.IO+exceptionHandler).launch {
-           val response= retrofit.getData()
-            withContext(Dispatchers.Main){
-                if (response.isSuccessful){
-                    response.body()?.let {
-                        cryptoModels= ArrayList(it)
-                        cryptoModels?.let {
-                            recyclerViewAdapter= RecyclerViewAdapter(it,this@ListFragment)
-                            binding?.recyclerView?.adapter=recyclerViewAdapter
+          }
+      })
+      viewModel.cryptoError.observe(viewLifecycleOwner, Observer {error->
+          error?.let{
+              if(it){
+                  binding?.cryptoErrorText?.visibility=View.VISIBLE
+                  binding?.recyclerView?.visibility=View.GONE
+              }else{
+                  binding?.cryptoErrorText?.visibility=View.GONE
 
-                        }
-
-
-                    }
-                }
-            }
-        }
+              }
 
 
-    }
+          }
+      })
+      viewModel.cryptoLoading.observe(viewLifecycleOwner, Observer { loading->
+          loading?.let {
+              if(it){
+                  binding?.cryptoProgressbar?.visibility=View.VISIBLE
+                  binding?.recyclerView?.visibility=View.GONE
+                  binding?.cryptoErrorText?.visibility=View.GONE
+
+              }else{
+                  binding?.cryptoProgressbar?.visibility=View.GONE
+
+              }
+
+
+          }
+      })
+
+  }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        job?.cancel()
     }
 
     override fun onItemClick(cryptoModel: CryptoModel) {
