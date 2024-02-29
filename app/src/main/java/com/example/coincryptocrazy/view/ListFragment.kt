@@ -19,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
@@ -27,7 +28,8 @@ class ListFragment : Fragment(),RecyclerViewAdapter.Listener {
     private var _binding:FragmentListBinding?=null
     private val binding get()=_binding
     private var cryptoAdapter=RecyclerViewAdapter(arrayListOf(),this)
-    private lateinit var viewModel: CryptoViewModel
+    private  val viewModel by viewModel<CryptoViewModel>()
+
 
 
 
@@ -50,7 +52,6 @@ class ListFragment : Fragment(),RecyclerViewAdapter.Listener {
         super.onViewCreated(view, savedInstanceState)
         val layoutManager = LinearLayoutManager(requireContext())
         binding?.recyclerView?.layoutManager=layoutManager
-        viewModel=ViewModelProvider(this).get(CryptoViewModel::class.java)
         viewModel.getDataFromApi()
         observeLiveData()
     }
@@ -58,14 +59,14 @@ class ListFragment : Fragment(),RecyclerViewAdapter.Listener {
       viewModel.cryptoList.observe(viewLifecycleOwner, Observer { cryptos->
           cryptos?.let {
               binding?.recyclerView?.visibility=View.VISIBLE
-              cryptoAdapter= RecyclerViewAdapter(ArrayList(cryptos),this@ListFragment)
+              cryptoAdapter= RecyclerViewAdapter(ArrayList(cryptos.data),this@ListFragment)
               binding?.recyclerView?.adapter=cryptoAdapter
 
           }
       })
       viewModel.cryptoError.observe(viewLifecycleOwner, Observer {error->
           error?.let{
-              if(it){
+              if(it.data==true){
                   binding?.cryptoErrorText?.visibility=View.VISIBLE
                   binding?.recyclerView?.visibility=View.GONE
               }else{
@@ -78,7 +79,7 @@ class ListFragment : Fragment(),RecyclerViewAdapter.Listener {
       })
       viewModel.cryptoLoading.observe(viewLifecycleOwner, Observer { loading->
           loading?.let {
-              if(it){
+              if(it.data==true){
                   binding?.cryptoProgressbar?.visibility=View.VISIBLE
                   binding?.recyclerView?.visibility=View.GONE
                   binding?.cryptoErrorText?.visibility=View.GONE
